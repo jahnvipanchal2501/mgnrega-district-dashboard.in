@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="hi" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MGNREGA जिला डैशबोर्ड</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #059669;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .icon-large {
+            width: 48px;
+            height: 48px;
+        }
+        
+        .text-shadow {
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full">
+  <main class="min-h-full"><!-- Header -->
+   <header class="shadow-sm border-b-2">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+     <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+       <div class="icon-large flex items-center justify-center rounded-full">
+        <svg viewbox="0 0 24 24" fill="currentColor" class="w-8 h-8"><path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z" /> <path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" fill="none" />
+        </svg>
+       </div>
+       <div>
+        <h1 id="app-title" class="text-xl sm:text-2xl font-bold text-shadow">MGNREGA जिला डैशबोर्ड</h1>
+        <p id="welcome-message" class="text-sm opacity-90">अपने जिले का MGNREGA प्रदर्शन देखें</p>
+       </div>
+      </div><button id="location-btn" class="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+       </svg><span>स्थान खोजें</span> </button>
+     </div>
+    </div>
+   </header><!-- Main Content -->
+   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"><!-- District Selection -->
+    <div id="district-selection" class="mb-8">
+     <div class="rounded-xl p-6 shadow-lg">
+      <h2 class="text-xl font-semibold mb-4 flex items-center">
+       <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+       </svg> अपना जिला चुनें / Select Your District</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+       <div><label for="state-select" class="block text-sm font-medium mb-2">राज्य / State</label> <select id="state-select" class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent text-lg"> <option value="">राज्य चुनें / Select State</option> <option value="UP">उत्तर प्रदेश / Uttar Pradesh</option> </select>
+       </div>
+       <div><label for="district-select" class="block text-sm font-medium mb-2">जिला / District</label> <select id="district-select" class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent text-lg" disabled> <option value="">पहले राज्य चुनें / Select State First</option> </select>
+       </div>
+      </div>
+      <div class="mt-4">
+       <p id="help-text" class="text-sm opacity-75">अपना जिला चुनने के लिए पहले राज्य का चयन करें</p>
+      </div>
+     </div>
+    </div><!-- Loading State -->
+    <div id="loading-state" class="hidden text-center py-12">
+     <div class="loading-spinner mx-auto mb-4"></div>
+     <p class="text-lg">डेटा लोड हो रहा है... / Loading Data...</p>
+    </div><!-- Dashboard Content -->
+    <div id="dashboard-content" class="hidden fade-in"><!-- District Info -->
+     <div class="mb-6 rounded-xl p-6 shadow-lg">
+      <div class="flex items-center justify-between mb-4">
+       <h2 id="selected-district" class="text-2xl font-bold">जिला डैशबोर्ड</h2>
+       <div class="flex items-center space-x-2 text-sm opacity-75">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg><span id="last-updated">अंतिम अपडेट: आज</span>
+       </div>
+      </div>
+     </div><!-- Key Metrics -->
+     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"><!-- Total Job Cards -->
+      <div class="card-hover rounded-xl p-6 shadow-lg">
+       <div class="flex items-center justify-between">
+        <div>
+         <p class="text-sm font-medium opacity-75">कुल जॉब कार्ड</p>
+         <p class="text-sm opacity-60">Total Job Cards</p>
+         <p id="total-job-cards" class="text-3xl font-bold mt-2">12,45,678</p>
+        </div>
+        <div class="icon-large rounded-full flex items-center justify-center">
+         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+         </svg>
+        </div>
+       </div>
+      </div><!-- Active Workers -->
+      <div class="card-hover rounded-xl p-6 shadow-lg">
+       <div class="flex items-center justify-between">
+        <div>
+         <p class="text-sm font-medium opacity-75">सक्रिय श्रमिक</p>
+         <p class="text-sm opacity-60">Active Workers</p>
+         <p id="active-workers" class="text-3xl font-bold mt-2">8,76,543</p>
+        </div>
+        <div class="icon-large rounded-full flex items-center justify-center">
+         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+         </svg>
+        </div>
+       </div>
+      </div><!-- Work Days Generated -->
+      <div class="card-hover rounded-xl p-6 shadow-lg">
+       <div class="flex items-center justify-between">
+        <div>
+         <p class="text-sm font-medium opacity-75">कार्य दिवस</p>
+         <p class="text-sm opacity-60">Work Days</p>
+         <p id="work-days" class="text-3xl font-bold mt-2">45,67,890</p>
+        </div>
+        <div class="icon-large rounded-full flex items-center justify-center">
+         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+         </svg>
+        </div>
+       </div>
+      </div><!-- Budget Utilization -->
+      <div class="card-hover rounded-xl p-6 shadow-lg">
+       <div class="flex items-center justify-between">
+        <div>
+         <p class="text-sm font-medium opacity-75">बजट उपयोग</p>
+         <p class="text-sm opacity-60">Budget Used</p>
+         <p id="budget-utilization" class="text-3xl font-bold mt-2">78%</p>
+        </div>
+        <div class="icon-large rounded-full flex items-center justify-center">
+         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+         </svg>
+        </div>
+       </div>
+      </div>
+     </div><!-- Performance Charts -->
+     <div class="grid lg:grid-cols-2 gap-6 mb-8"><!-- Monthly Progress -->
+      <div class="rounded-xl p-6 shadow-lg">
+       <h3 class="text-lg font-semibold mb-4">मासिक प्रगति / Monthly Progress</h3>
+       <div class="space-y-4">
+        <div>
+         <div class="flex justify-between text-sm mb-1"><span>जनवरी / January</span> <span>85%</span>
+         </div>
+         <div class="w-full rounded-full h-3">
+          <div class="progress-bar h-3 rounded-full" style="width: 85%"></div>
+         </div>
+        </div>
+        <div>
+         <div class="flex justify-between text-sm mb-1"><span>फरवरी / February</span> <span>92%</span>
+         </div>
+         <div class="w-full rounded-full h-3">
+          <div class="progress-bar h-3 rounded-full" style="width: 92%"></div>
+         </div>
+        </div>
+        <div>
+         <div class="flex justify-between text-sm mb-1"><span>मार्च / March</span> <span>78%</span>
+         </div>
+         <div class="w-full rounded-full h-3">
+          <div class="progress-bar h-3 rounded-full" style="width: 78%"></div>
+         </div>
+        </div>
+       </div>
+      </div><!-- Work Categories -->
+      <div class="rounded-xl p-6 shadow-lg">
+       <h3 class="text-lg font-semibold mb-4">कार्य श्रेणियां / Work Categories</h3>
+       <div class="space-y-3">
+        <div class="flex items-center justify-between p-3 rounded-lg">
+         <div class="flex items-center space-x-3">
+          <div class="w-4 h-4 rounded-full"></div><span class="text-sm">सड़क निर्माण / Road Construction</span>
+         </div><span class="font-semibold">45%</span>
+        </div>
+        <div class="flex items-center justify-between p-3 rounded-lg">
+         <div class="flex items-center space-x-3">
+          <div class="w-4 h-4 rounded-full"></div><span class="text-sm">जल संरक्षण / Water Conservation</span>
+         </div><span class="font-semibold">30%</span>
+        </div>
+        <div class="flex items-center justify-between p-3 rounded-lg">
+         <div class="flex items-center space-x-3">
+          <div class="w-4 h-4 rounded-full"></div><span class="text-sm">कृषि कार्य / Agriculture Work</span>
+         </div><span class="font-semibold">25%</span>
+        </div>
+       </div>
+      </div>
+     </div><!-- Key Information -->
+     <div class="rounded-xl p-6 shadow-lg">
+      <h3 class="text-lg font-semibold mb-4">महत्वपूर्ण जानकारी / Key Information</h3>
+      <div class="grid md:grid-cols-2 gap-6">
+       <div>
+        <h4 class="font-medium mb-2">MGNREGA क्या है?</h4>
+        <p class="text-sm opacity-75 leading-relaxed">महात्मा गांधी राष्ट्रीय ग्रामीण रोजगार गारंटी अधिनियम (MGNREGA) भारत सरकार की एक योजना है जो ग्रामीण परिवारों को साल में कम से कम 100 दिन का रोजगार देने की गारंटी देती है।</p>
+       </div>
+       <div>
+        <h4 class="font-medium mb-2">What is MGNREGA?</h4>
+        <p class="text-sm opacity-75 leading-relaxed">The Mahatma Gandhi National Rural Employment Guarantee Act (MGNREGA) is a government scheme that guarantees at least 100 days of employment per year to rural households.</p>
+       </div>
+      </div>
+     </div>
+    </div><!-- Error State -->
+    <div id="error-state" class="hidden text-center py-12">
+     <div class="rounded-xl p-8 shadow-lg max-w-md mx-auto">
+      <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+      </svg>
+      <h3 class="text-lg font-semibold mb-2">डेटा लोड नहीं हो सका</h3>
+      <p class="text-sm opacity-75 mb-4">कृपया बाद में पुनः प्रयास करें</p><button id="retry-btn" class="px-6 py-2 rounded-lg font-medium transition-colors"> पुनः प्रयास करें </button>
+     </div>
+    </div>
+   </div>
+  </main>
+  <script>
+        // Configuration and state
+        let currentData = [];
+        let selectedDistrict = null;
+        let isLoading = false;
+
+        // Default configuration
+        const defaultConfig = {
+            app_title: "MGNREGA जिला डैशबोर्ड",
+            welcome_message: "अपने जिले का MGNREGA प्रदर्शन देखें",
+            help_text: "अपना जिला चुनने के लिए पहले राज्य का चयन करें",
+            primary_color: "#059669",
+            secondary_color: "#f0fdf4",
+            text_color: "#1f2937",
+            surface_color: "#ffffff",
+            accent_color: "#10b981"
+        };
+
+        // Sample districts data for Uttar Pradesh
+        const districtsData = {
+            "UP": [
+                { code: "UP001", name: "आगरा / Agra" },
+                { code: "UP002", name: "अलीगढ़ / Aligarh" },
+                { code: "UP003", name: "इलाहाबाद / Allahabad" },
+                { code: "UP004", name: "अंबेडकर नगर / Ambedkar Nagar" },
+                { code: "UP005", name: "अमेठी / Amethi" },
+                { code: "UP006", name: "अमरोहा / Amroha" },
+                { code: "UP007", name: "औरैया / Auraiya" },
+                { code: "UP008", name: "आजमगढ़ / Azamgarh" },
+                { code: "UP009", name: "बदायूं / Badaun" },
+                { code: "UP010", name: "बहराइच / Bahraich" },
+                { code: "UP011", name: "बलिया / Ballia" },
+                { code: "UP012", name: "बलरामपुर / Balrampur" },
+                { code: "UP013", name: "बांदा / Banda" },
+                { code: "UP014", name: "बाराबंकी / Barabanki" },
+                { code: "UP015", name: "बरेली / Bareilly" },
+                { code: "UP016", name: "बस्ती / Basti" },
+                { code: "UP017", name: "भदोही / Bhadohi" },
+                { code: "UP018", name: "बिजनौर / Bijnor" },
+                { code: "UP019", name: "बुलंदशहर / Bulandshahr" },
+                { code: "UP020", name: "चंदौली / Chandauli" }
+            ]
+        };
+
+        // Sample MGNREGA data
+        const sampleMGNREGAData = {
+            totalJobCards: 1245678,
+            activeWorkers: 876543,
+            workDays: 4567890,
+            budgetUtilization: 78,
+            monthlyProgress: [
+                { month: "January", progress: 85 },
+                { month: "February", progress: 92 },
+                { month: "March", progress: 78 }
+            ],
+            workCategories: [
+                { name: "Road Construction", percentage: 45 },
+                { name: "Water Conservation", percentage: 30 },
+                { name: "Agriculture Work", percentage: 25 }
+            ]
+        };
+
+        // Data handler for SDK
+        const dataHandler = {
+            onDataChanged(data) {
+                currentData = data;
+                console.log('Data updated:', data.length, 'records');
+            }
+        };
+
+        // Initialize SDKs
+        async function initializeSDKs() {
+            try {
+                if (window.dataSdk) {
+                    const initResult = await window.dataSdk.init(dataHandler);
+                    if (!initResult.isOk) {
+                        console.error("Failed to initialize data SDK");
+                    }
+                }
+
+                if (window.elementSdk) {
+                    await window.elementSdk.init({
+                        defaultConfig,
+                        onConfigChange: async (config) => {
+                            // Update app title
+                            const titleElement = document.getElementById('app-title');
+                            if (titleElement) {
+                                titleElement.textContent = config.app_title || defaultConfig.app_title;
+                            }
+
+                            // Update welcome message
+                            const welcomeElement = document.getElementById('welcome-message');
+                            if (welcomeElement) {
+                                welcomeElement.textContent = config.welcome_message || defaultConfig.welcome_message;
+                            }
+
+                            // Update help text
+                            const helpElement = document.getElementById('help-text');
+                            if (helpElement) {
+                                helpElement.textContent = config.help_text || defaultConfig.help_text;
+                            }
+
+                            // Apply colors
+                            const primaryColor = config.primary_color || defaultConfig.primary_color;
+                            const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
+                            const textColor = config.text_color || defaultConfig.text_color;
+                            const surfaceColor = config.surface_color || defaultConfig.surface_color;
+                            const accentColor = config.accent_color || defaultConfig.accent_color;
+
+                            // Update CSS custom properties
+                            document.documentElement.style.setProperty('--primary-color', primaryColor);
+                            document.documentElement.style.setProperty('--secondary-color', secondaryColor);
+                            document.documentElement.style.setProperty('--text-color', textColor);
+                            document.documentElement.style.setProperty('--surface-color', surfaceColor);
+                            document.documentElement.style.setProperty('--accent-color', accentColor);
+
+                            // Apply colors to elements
+                            document.body.style.backgroundColor = secondaryColor;
+                            document.body.style.color = textColor;
+
+                            // Header styling
+                            const header = document.querySelector('header');
+                            if (header) {
+                                header.style.backgroundColor = surfaceColor;
+                                header.style.borderBottomColor = primaryColor;
+                            }
+
+                            // Icon styling
+                            const headerIcon = document.querySelector('header .icon-large');
+                            if (headerIcon) {
+                                headerIcon.style.backgroundColor = primaryColor;
+                                headerIcon.style.color = surfaceColor;
+                            }
+
+                            // Button styling
+                            const locationBtn = document.getElementById('location-btn');
+                            if (locationBtn) {
+                                locationBtn.style.backgroundColor = accentColor;
+                                locationBtn.style.color = surfaceColor;
+                            }
+
+                            // Card styling
+                            const cards = document.querySelectorAll('.shadow-lg');
+                            cards.forEach(card => {
+                                card.style.backgroundColor = surfaceColor;
+                            });
+
+                            // Metric card icons
+                            const metricIcons = document.querySelectorAll('.card-hover .icon-large');
+                            metricIcons.forEach(icon => {
+                                icon.style.backgroundColor = primaryColor;
+                                icon.style.color = surfaceColor;
+                            });
+
+                            // Progress bars
+                            const progressBars = document.querySelectorAll('.progress-bar');
+                            progressBars.forEach(bar => {
+                                bar.style.backgroundColor = primaryColor;
+                            });
+
+                            // Progress bar backgrounds
+                            const progressBgs = document.querySelectorAll('.progress-bar').map(bar => bar.parentElement);
+                            progressBgs.forEach(bg => {
+                                if (bg) bg.style.backgroundColor = secondaryColor;
+                            });
+
+                            // Work category indicators
+                            const categoryIndicators = document.querySelectorAll('.w-4.h-4.rounded-full');
+                            categoryIndicators.forEach((indicator, index) => {
+                                const colors = [primaryColor, accentColor, '#f59e0b'];
+                                indicator.style.backgroundColor = colors[index % colors.length];
+                            });
+                        },
+                        mapToCapabilities: (config) => ({
+                            recolorables: [
+                                {
+                                    get: () => config.primary_color || defaultConfig.primary_color,
+                                    set: (value) => {
+                                        config.primary_color = value;
+                                        window.elementSdk.setConfig({ primary_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.secondary_color || defaultConfig.secondary_color,
+                                    set: (value) => {
+                                        config.secondary_color = value;
+                                        window.elementSdk.setConfig({ secondary_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.text_color || defaultConfig.text_color,
+                                    set: (value) => {
+                                        config.text_color = value;
+                                        window.elementSdk.setConfig({ text_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.surface_color || defaultConfig.surface_color,
+                                    set: (value) => {
+                                        config.surface_color = value;
+                                        window.elementSdk.setConfig({ surface_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.accent_color || defaultConfig.accent_color,
+                                    set: (value) => {
+                                        config.accent_color = value;
+                                        window.elementSdk.setConfig({ accent_color: value });
+                                    }
+                                }
+                            ],
+                            borderables: [],
+                            fontEditable: undefined,
+                            fontSizeable: undefined
+                        }),
+                        mapToEditPanelValues: (config) => new Map([
+                            ["app_title", config.app_title || defaultConfig.app_title],
+                            ["welcome_message", config.welcome_message || defaultConfig.welcome_message],
+                            ["help_text", config.help_text || defaultConfig.help_text]
+                        ])
+                    });
+                }
+            } catch (error) {
+                console.error('SDK initialization error:', error);
+            }
+        }
+
+        // Location detection
+        async function detectLocation() {
+            const locationBtn = document.getElementById('location-btn');
+            const originalText = locationBtn.innerHTML;
+            
+            locationBtn.innerHTML = '<div class="loading-spinner"></div><span>स्थान खोज रहे हैं...</span>';
+            locationBtn.disabled = true;
+
+            try {
+                if (!navigator.geolocation) {
+                    throw new Error('Geolocation not supported');
+                }
+
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        timeout: 10000,
+                        enableHighAccuracy: true
+                    });
+                });
+
+                // Simulate reverse geocoding (in production, use actual API)
+                const mockDistrict = {
+                    code: "UP001",
+                    name: "आगरा / Agra",
+                    state: "UP"
+                };
+
+                // Auto-select detected district
+                document.getElementById('state-select').value = mockDistrict.state;
+                populateDistricts(mockDistrict.state);
+                document.getElementById('district-select').value = mockDistrict.code;
+                
+                // Save location data
+                if (window.dataSdk && currentData.length < 999) {
+                    await window.dataSdk.create({
+                        district_code: mockDistrict.code,
+                        district_name: mockDistrict.name,
+                        state_name: "Uttar Pradesh",
+                        last_accessed: new Date().toISOString(),
+                        user_location: `${position.coords.latitude},${position.coords.longitude}`
+                    });
+                }
+
+                loadDistrictData(mockDistrict.code, mockDistrict.name);
+
+            } catch (error) {
+                console.error('Location detection failed:', error);
+                showCustomAlert('स्थान की पहचान नहीं हो सकी। कृपया मैन्युअल रूप से जिला चुनें।');
+            } finally {
+                locationBtn.innerHTML = originalText;
+                locationBtn.disabled = false;
+            }
+        }
+
+        // Populate districts based on state
+        function populateDistricts(stateCode) {
+            const districtSelect = document.getElementById('district-select');
+            const districts = districtsData[stateCode] || [];
+            
+            districtSelect.innerHTML = '<option value="">जिला चुनें / Select District</option>';
+            
+            districts.forEach(district => {
+                const option = document.createElement('option');
+                option.value = district.code;
+                option.textContent = district.name;
+                districtSelect.appendChild(option);
+            });
+            
+            districtSelect.disabled = false;
+        }
+
+        // Load district data
+        async function loadDistrictData(districtCode, districtName) {
+            if (isLoading) return;
+            
+            isLoading = true;
+            showLoading();
+
+            try {
+                // Simulate API call delay
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // In production, this would fetch from MGNREGA API
+                // For demo, using sample data
+                const data = sampleMGNREGAData;
+
+                // Update UI with data
+                updateDashboard(districtName, data);
+                
+                // Save access record
+                if (window.dataSdk && currentData.length < 999) {
+                    await window.dataSdk.create({
+                        district_code: districtCode,
+                        district_name: districtName,
+                        state_name: "Uttar Pradesh",
+                        last_accessed: new Date().toISOString(),
+                        user_location: "manual_selection"
+                    });
+                }
+
+                showDashboard();
+
+            } catch (error) {
+                console.error('Failed to load district data:', error);
+                showError();
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // Update dashboard with data
+        function updateDashboard(districtName, data) {
+            document.getElementById('selected-district').textContent = `${districtName} - जिला डैशबोर्ड`;
+            document.getElementById('total-job-cards').textContent = formatNumber(data.totalJobCards);
+            document.getElementById('active-workers').textContent = formatNumber(data.activeWorkers);
+            document.getElementById('work-days').textContent = formatNumber(data.workDays);
+            document.getElementById('budget-utilization').textContent = `${data.budgetUtilization}%`;
+            document.getElementById('last-updated').textContent = `अंतिम अपडेट: ${new Date().toLocaleDateString('hi-IN')}`;
+        }
+
+        // Format numbers for Indian locale
+        function formatNumber(num) {
+            return new Intl.NumberFormat('hi-IN').format(num);
+        }
+
+        // Show/hide states
+        function showLoading() {
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('dashboard-content').classList.add('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+        }
+
+        function showDashboard() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+        }
+
+        function showError() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.add('hidden');
+            document.getElementById('error-state').classList.remove('hidden');
+        }
+
+        // Custom alert function (no browser dialogs)
+        function showCustomAlert(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded shadow-lg z-50';
+            alertDiv.innerHTML = `
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-yellow-700 hover:text-yellow-900">×</button>
+                </div>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentElement) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Production API integration (replace with actual MGNREGA API)
+        async function fetchMGNREGAData(districtCode) {
+            try {
+                // Replace with actual data.gov.in API endpoint
+                const apiUrl = `https://api.data.gov.in/resource/mgnrega-district-performance?district_code=${districtCode}&api-key=YOUR_API_KEY`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'MGNREGA-Dashboard/1.0'
+                    },
+                    timeout: 10000
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API fetch failed:', error);
+                // Fallback to cached data or sample data
+                return sampleMGNREGAData;
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeSDKs();
+
+            // State selection
+            document.getElementById('state-select').addEventListener('change', (e) => {
+                const stateCode = e.target.value;
+                if (stateCode) {
+                    populateDistricts(stateCode);
+                } else {
+                    document.getElementById('district-select').innerHTML = '<option value="">पहले राज्य चुनें / Select State First</option>';
+                    document.getElementById('district-select').disabled = true;
+                }
+            });
+
+            // District selection
+            document.getElementById('district-select').addEventListener('change', (e) => {
+                const districtCode = e.target.value;
+                if (districtCode) {
+                    const districtName = e.target.options[e.target.selectedIndex].textContent;
+                    loadDistrictData(districtCode, districtName);
+                }
+            });
+
+            // Location detection
+            document.getElementById('location-btn').addEventListener('click', detectLocation);
+
+            // Retry button
+            document.getElementById('retry-btn').addEventListener('click', () => {
+                if (selectedDistrict) {
+                    loadDistrictData(selectedDistrict.code, selectedDistrict.name);
+                }
+            });
+
+            // Apply initial styling
+            if (window.elementSdk && window.elementSdk.config) {
+                const config = window.elementSdk.config;
+                // Trigger initial styling
+                if (window.elementSdk.onConfigChange) {
+                    await window.elementSdk.onConfigChange(config);
+                }
+            }
+        });
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'993f500240723226',t:'MTc2MTM3MDEyOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
